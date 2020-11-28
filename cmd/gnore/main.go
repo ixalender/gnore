@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 )
@@ -49,7 +51,23 @@ func main() {
 }
 
 func listTemplates() (err error) {
-	info("list of templates is not implemented...")
+	var templates []string
+	err = filepath.Walk(repoDir, func(
+		path string,
+		info os.FileInfo,
+		err error) error {
+
+		if filepath.Ext(path) == ".gitignore" {
+			templates = append(templates, strings.Split(info.Name(), ".")[0])
+		}
+		return nil
+	})
+	checkError(err)
+
+	for _, template := range templates {
+		fmt.Println(template)
+	}
+
 	return
 }
 
