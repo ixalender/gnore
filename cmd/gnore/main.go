@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"github.com/go-git/go-git/v5"
 )
 
-const repoDir = "./templates"
+const repoFolder = "templates"
 
 const repoURL = "https://github.com/github/gitignore.git"
 
@@ -18,10 +19,7 @@ const usage = `
   Usage:
     gnore update                        update available templates
     gnore list                          list available templates
-    gnore get <template> [--path dest]  add .gitignore file by specific template
-
-  Options:
-    -p, --path dest   config file to load [default: robo.yml]
+    gnore get <template> <dest>         add .gitignore file to the <path> by the specific <template> name
 
   Examples:
 
@@ -36,13 +34,13 @@ func main() {
 	case "list":
 		listTemplates()
 	case "update":
-		fmt.Println("Updateing templates...")
+		fmt.Println("Updating templates...")
 		updateTemplates()
 		fmt.Println("Done.")
 	case "get":
 		if template := flag.Arg(1); template != "" {
-			path := flag.String("path", ".", "destination path")
-			getTemplate(template, *path)
+			path := parseArg(flag.Args(), 2, ".")
+			getTemplate(template, path)
 		}
 
 	default:
@@ -50,8 +48,20 @@ func main() {
 	}
 }
 
+func parseArg(args []string, pos int, defaultVal string) string {
+	if len(args) > pos {
+		return args[pos]
+	}
+	return defaultVal
+}
+
 func listTemplates() (err error) {
 	var templates []string
+	repoDir := getRepoDir(repoFolder)
+
+	err = checkRepo(repoDir)
+	checkError(err)
+
 	err = filepath.Walk(repoDir, func(
 		path string,
 		info os.FileInfo,
@@ -72,21 +82,23 @@ func listTemplates() (err error) {
 }
 
 func updateTemplates() (err error) {
+	repoDir := getRepoDir(repoFolder)
+
 	if _, err := os.Stat(repoDir + "/.git"); os.IsNotExist(err) {
 		err := os.MkdirAll(repoDir, 0755)
 		if err != nil {
 			return err
 		}
-		clone()
+		clone(repoDir)
 	} else {
-		pull()
+		pull(repoDir)
 	}
 
 	return
 }
 
-func clone() (err error) {
-	_, cloneErr := git.PlainClone(repoDir, false, &git.CloneOptions{
+func clone(dest string) (err error) {
+	_, cloneErr := git.PlainClone(dest, false, &git.CloneOptions{
 		URL:               repoURL,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 	})
@@ -95,8 +107,8 @@ func clone() (err error) {
 	return
 }
 
-func pull() (err error) {
-	r, err := git.PlainOpen(repoDir)
+func pull(dest string) (err error) {
+	r, err := git.PlainOpen(dest)
 	checkError(err)
 
 	w, err := r.Worktree()
@@ -108,8 +120,79 @@ func pull() (err error) {
 }
 
 func getTemplate(name string, path string) (err error) {
-	info("getting template is not implemented...")
+	repoDir := getRepoDir(repoFolder)
+
+	templateFile, err := searchTemplate(name)
+	if err != nil || len(templateFile) == 0 {
+		checkError(fmt.Errorf("There's no template with name: %s", name))
+	}
+
+	err = checkRepo(repoDir)
+	checkError(err)
+
+	_, err = copyFile(templateFile, path+"/.gitignore")
+	checkError(err)
+
 	return
+}
+
+func searchTemplate(name string) (string, error) {
+	var filePath string
+	repoDir := getRepoDir(repoFolder)
+	err := filepath.Walk(repoDir, func(
+		path string,
+		info os.FileInfo,
+		err error) error {
+
+		if strings.ToLower(info.Name()) == strings.ToLower(name+".gitignore") {
+
+			filePath = path
+			return nil
+		}
+		return nil
+	})
+	checkError(err)
+	return filePath, nil
+}
+
+func checkRepo(path string) (err error) {
+	if _, err := os.Stat(path + "/.git"); os.IsNotExist(err) {
+		return fmt.Errorf("Here's no any templates yet. Please do 'gnore update'")
+	}
+	return
+}
+
+func getRepoDir(repoFolder string) string {
+	selfDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	checkError(err)
+
+	return fmt.Sprintf("%s/%s", selfDir, repoFolder)
+}
+
+func copyFile(src, dest string) (int64, error) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dest)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }
 
 func info(format string, args ...interface{}) {
