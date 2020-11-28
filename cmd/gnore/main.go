@@ -1,11 +1,11 @@
 package main
 
 import (
-    "flag"
-    "fmt"
-    "os"
-    
-    "github.com/go-git/go-git/v5"
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/go-git/go-git/v5"
 )
 
 const repoDir = "./templates"
@@ -27,58 +27,58 @@ const usage = `
     $ gnore get python .
 `
 
-func main()  {
-    flag.Parse()
+func main() {
+	flag.Parse()
 
-    switch flag.Arg(0) {
-    case "list":
-        listTemplates()
-    case "update":
-        fmt.Println("Updateing templates...")
-        updateTemplates()
-        fmt.Println("Done.")
-    case "get":
-        if template := flag.Arg(1); template != "" {
-            path := flag.String("path", ".", "destination path")
-            getTemplate(template, *path)
-        }
-        
-    default:
-        fmt.Println(usage)
-    }
+	switch flag.Arg(0) {
+	case "list":
+		listTemplates()
+	case "update":
+		fmt.Println("Updateing templates...")
+		updateTemplates()
+		fmt.Println("Done.")
+	case "get":
+		if template := flag.Arg(1); template != "" {
+			path := flag.String("path", ".", "destination path")
+			getTemplate(template, *path)
+		}
+
+	default:
+		fmt.Println(usage)
+	}
 }
 
 func listTemplates() (err error) {
-    info("list of templates is not implemented...")
-    return
+	info("list of templates is not implemented...")
+	return
 }
 
 func updateTemplates() (err error) {
-    if _, err := os.Stat(repoDir + "/.git"); os.IsNotExist(err) {
-        err := os.MkdirAll(repoDir, 0755)
-        if err != nil {
-            return err
-        }
-        clone()
-    } else {
-        pull()
-    }
+	if _, err := os.Stat(repoDir + "/.git"); os.IsNotExist(err) {
+		err := os.MkdirAll(repoDir, 0755)
+		if err != nil {
+			return err
+		}
+		clone()
+	} else {
+		pull()
+	}
 
-    return
+	return
 }
 
 func clone() (err error) {
-    _, cloneErr := git.PlainClone(repoDir, false, &git.CloneOptions{
-		URL: repoURL,
+	_, cloneErr := git.PlainClone(repoDir, false, &git.CloneOptions{
+		URL:               repoURL,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-    })
-    
-    checkError(cloneErr)
-    return
+	})
+
+	checkError(cloneErr)
+	return
 }
 
 func pull() (err error) {
-    r, err := git.PlainOpen(repoDir)
+	r, err := git.PlainOpen(repoDir)
 	checkError(err)
 
 	w, err := r.Worktree()
@@ -86,16 +86,16 @@ func pull() (err error) {
 
 	err = w.Pull(&git.PullOptions{RemoteName: "origin"})
 	checkError(err)
-    return
+	return
 }
 
 func getTemplate(name string, path string) (err error) {
-    info("getting template is not implemented...")
-    return
+	info("getting template is not implemented...")
+	return
 }
 
-func info(format string, args ...interface {}) {
-    fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+func info(format string, args ...interface{}) {
+	fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
 }
 
 func checkError(err error) {
