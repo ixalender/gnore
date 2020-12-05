@@ -11,7 +11,8 @@ import (
 	"github.com/go-git/go-git/v5"
 )
 
-const repoFolder = "templates"
+// TODO: use build -tags to split production and debug template path
+const repoFolder = "/usr/local/share/gnore/templates"
 
 const repoURL = "https://github.com/github/gitignore.git"
 
@@ -21,7 +22,7 @@ const usage = `
     gnore list                          list available templates
     gnore get <template> <dest>         add .gitignore file to the <path> by the specific <template> name
 
-  Examples:
+  Example:
 
     add .gitignore file by template name to the same dir
     $ gnore get python .
@@ -34,9 +35,10 @@ func main() {
 	case "list":
 		listTemplates()
 	case "update":
-		fmt.Println("Updating templates...")
-		updateTemplates()
-		fmt.Println("Done.")
+		info("Updating templates...")
+		err := updateTemplates()
+		checkError(err)
+		info("Done.")
 	case "get":
 		if template := flag.Arg(1); template != "" {
 			path := parseArg(flag.Args(), 2, ".")
@@ -124,7 +126,7 @@ func getTemplate(name string, path string) (err error) {
 
 	templateFile, err := searchTemplate(name)
 	if err != nil || len(templateFile) == 0 {
-		checkError(fmt.Errorf("There's no template with name: %s", name))
+		checkError(fmt.Errorf("There's no template with the name: %s", name))
 	}
 
 	err = checkRepo(repoDir)
@@ -132,6 +134,7 @@ func getTemplate(name string, path string) (err error) {
 
 	_, err = copyFile(templateFile, path+"/.gitignore")
 	checkError(err)
+	info("Done.")
 
 	return
 }
@@ -157,16 +160,13 @@ func searchTemplate(name string) (string, error) {
 
 func checkRepo(path string) (err error) {
 	if _, err := os.Stat(path + "/.git"); os.IsNotExist(err) {
-		return fmt.Errorf("Here's no any templates yet. Please do 'gnore update'")
+		return fmt.Errorf("There are no templates yet. Please do 'gnore update'")
 	}
 	return
 }
 
 func getRepoDir(repoFolder string) string {
-	selfDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	checkError(err)
-
-	return fmt.Sprintf("%s/%s", selfDir, repoFolder)
+	return repoFolder
 }
 
 func copyFile(src, dest string) (int64, error) {
