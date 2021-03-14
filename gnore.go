@@ -86,13 +86,13 @@ func pull(dest string) (err error) {
 func GetTemplate(name string, path string) (err error) {
 	repoDir := getRepoDir(repoFolder)
 
+	err = checkRepo(repoDir)
+	CheckError(err)
+
 	templateFile, err := SearchTemplate(name)
 	if err != nil || len(templateFile) == 0 {
 		CheckError(fmt.Errorf("There's no template with the name: %s", name))
 	}
-
-	err = checkRepo(repoDir)
-	CheckError(err)
 
 	filePath := path + "/.gitignore"
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
