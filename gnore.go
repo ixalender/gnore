@@ -3,6 +3,7 @@ package gnore
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,8 +94,17 @@ func GetTemplate(name string, path string) (err error) {
 	err = checkRepo(repoDir)
 	CheckError(err)
 
-	_, err = copyFile(templateFile, path+"/.gitignore")
-	CheckError(err)
+	filePath := path + "/.gitignore"
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		Info("Copy...")
+		_, err = copyFile(templateFile, filePath)
+		CheckError(err)
+	} else {
+		Info("Merge...")
+		_, err = mergeFiles(templateFile, filePath)
+		CheckError(err)
+	}
+
 	Info("Done.")
 
 	return
@@ -132,13 +142,9 @@ func getRepoDir(repoFolder string) string {
 }
 
 func copyFile(src, dest string) (int64, error) {
-	sourceFileStat, err := os.Stat(src)
+	_, err := checkFileRegular(src)
 	if err != nil {
 		return 0, err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return 0, fmt.Errorf("%s is not a regular file", src)
 	}
 
 	source, err := os.Open(src)
@@ -155,6 +161,48 @@ func copyFile(src, dest string) (int64, error) {
 
 	nBytes, err := io.Copy(destination, source)
 	return nBytes, err
+}
+
+func mergeFiles(from, to string) (int64, error) {
+	_, err := checkFileRegular(from)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = checkFileRegular(to)
+	if err != nil {
+		return 0, err
+	}
+
+	sourceBuf, err := ioutil.ReadFile(from)
+	if err != nil {
+		return 0, fmt.Errorf("Error while reading %s", from)
+	}
+
+	dest, err := os.OpenFile(to, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return 0, err
+	}
+	defer dest.Close()
+
+	if _, err := dest.WriteString(fmt.Sprintf("\r\n\r\n%s", string(sourceBuf))); err != nil {
+		return 0, fmt.Errorf("Error while merging %s to %s", from, to)
+	}
+
+	return 1, nil
+}
+
+func checkFileRegular(filePath string) (int64, error) {
+	fileStat, err := os.Stat(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	if !fileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", filePath)
+	}
+
+	return 1, nil
 }
 
 // Info prints given information with params
