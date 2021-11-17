@@ -15,14 +15,16 @@ List available templates
 gnore list
 ```
 
-Add .gitignore file to the destination directory by the specific template name
+Add .gitignore file to the destination directory by the specific template name. If **.gitignore** exists, **gnore** will add specified template to the end of **.gitignore** file.
 ```
 gnore get <template> <dest>
 ```
 
-Example
+Examples
 ```
 gnore get python .
+
+gnore get vue ./some-project-folder
 ```
 ## License
 MIT
