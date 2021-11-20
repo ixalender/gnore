@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -36,6 +37,9 @@ func ListTemplates() (err error) {
 	})
 	CheckError(err)
 
+	sort.Slice(templates, func(i, j int) bool {
+		return strings.ToLower(templates[i]) < strings.ToLower(templates[j])
+	})
 	for _, template := range templates {
 		fmt.Println(template)
 	}
