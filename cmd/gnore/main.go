@@ -32,6 +32,7 @@ func main() {
 		fmt.Println(usage)
 	case "list":
 		gnore.ListTemplates()
+		gnore.Info("\nUse 'gnore list | grep ...' to find out if the template is represented.\n")
 	case "update":
 		gnore.Info("Updating templates...")
 		err := gnore.UpdateTemplates()
